@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nokia Snake</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Courier New", Courier, monospace;
+      background: #e8eee1;
+      color: #172820;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px 16px;
+      background-image: linear-gradient(rgba(23, 40, 32, .035) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(23, 40, 32, .035) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    main {
+      width: min(100%, 520px);
+      animation: arrive .45s ease-out both;
+    }
+
+    @keyframes arrive {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: #53665a;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 8vw, 48px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .scorebar {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 22px 2px 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .score-label { color: #53665a; font-size: 12px; }
+    #score { color: #172820; font-size: 24px; }
+
+    .recordbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -4px 2px 12px;
+      color: #53665a;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .screen {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 1;
+      border: 5px solid #172820;
+      background: #c9dfa5;
+      box-shadow: 7px 7px 0 #9eac94;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    .status {
+      min-height: 26px;
+      margin: 19px 0 11px;
+      text-align: center;
+      color: #53665a;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .record-form {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #53665a;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .record-form[hidden] { display: none; }
+
+    .record-entry {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .record-entry input {
+      width: min(100%, 220px);
+      min-width: 0;
+      border: 2px solid #172820;
+      border-radius: 2px;
+      padding: 0 10px;
+      background: #f7f8ef;
+      color: #172820;
+      font: inherit;
+    }
+
+    .record-entry input:focus-visible { outline: 3px solid #db593d; outline-offset: 3px; }
+
+    button {
+      min-height: 44px;
+      border: 2px solid #172820;
+      border-radius: 2px;
+      padding: 0 16px;
+      background: #f7f8ef;
+      color: #172820;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 #9eac94;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+
+    button:hover { background: #fff; }
+    button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #9eac94; }
+    button:focus-visible { outline: 3px solid #db593d; outline-offset: 3px; }
+
+    #start-button {
+      min-width: 132px;
+      background: #172820;
+      color: #f7f8ef;
+      box-shadow: 3px 3px 0 #758475;
+    }
+
+    #start-button:hover { background: #294536; }
+
+    .dpad {
+      display: none;
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: repeat(2, 42px);
+      justify-content: center;
+      gap: 5px;
+      margin: 20px auto 0;
+    }
+
+    .dpad button {
+      min-height: 42px;
+      padding: 0;
+      font-size: 11px;
+      touch-action: manipulation;
+    }
+
+    .dpad [data-dir="up"] { grid-column: 2; grid-row: 1; }
+    .dpad [data-dir="left"] { grid-column: 1; grid-row: 2; }
+    .dpad [data-dir="down"] { grid-column: 2; grid-row: 2; }
+    .dpad [data-dir="right"] { grid-column: 3; grid-row: 2; }
+
+    @media (pointer: coarse) {
+      .dpad { display: grid; }
+    }
+
+    @media (max-width: 390px) {
+      body { padding: 20px 14px; }
+      .controls { gap: 8px; }
+      button { padding: 0 11px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="topline"><span>Classic arcade</span><span>01 / Snake</span></div>
+    <h1>Nokia Snake</h1>
+
+    <div class="scorebar" aria-live="polite">
+      <span class="score-label">Apples eaten</span>
+      <span id="score">00</span>
+    </div>
+    <div class="recordbar" aria-live="polite">
+      <span>High score</span>
+      <span><span id="high-score">00</span> <span id="high-score-name">No name yet</span></span>
+    </div>
+
+    <div class="screen">
+      <canvas id="game" width="420" height="420" aria-label="Snake game board"></canvas>
+    </div>
+
+    <p class="status" id="status" aria-live="polite">Press Start, then use the arrow keys.</p>
+    <form class="record-form" id="record-form" hidden>
+      <label for="record-name">New high score! Save your name.</label>
+      <div class="record-entry">
+        <input id="record-name" type="text" maxlength="18" autocomplete="nickname" placeholder="Your name" required>
+        <button type="submit">Save</button>
+      </div>
+    </form>
+
+    <div class="controls">
+      <button id="start-button" type="button">Start game</button>
+      <button id="restart-button" type="button">Restart</button>
+    </div>
+
+    <div class="dpad" aria-label="Touch controls">
+      <button type="button" data-dir="up" aria-label="Move up">Up</button>
+      <button type="button" data-dir="left" aria-label="Move left">Left</button>
+      <button type="button" data-dir="down" aria-label="Move down">Down</button>
+      <button type="button" data-dir="right" aria-label="Move right">Right</button>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    const context = canvas.getContext("2d");
+    const scoreDisplay = document.querySelector("#score");
+    const highScoreDisplay = document.querySelector("#high-score");
+    const highScoreNameDisplay = document.querySelector("#high-score-name");
+    const statusDisplay = document.querySelector("#status");
+    const startButton = document.querySelector("#start-button");
+    const recordForm = document.querySelector("#record-form");
+    const recordNameInput = document.querySelector("#record-name");
+    const cellSize = 20;
+    const cellCount = canvas.width / cellSize;
+    const recordStorageKey = "nokia-snake-high-score";
+
+    let snake;
+    let apple;
+    let direction;
+    let nextDirection;
+    let score = 0;
+    let gameState = "ready";
+    let timerId;
+    let bestScore = loadBestScore();
+
+    function loadBestScore() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(recordStorageKey));
+        if (saved && Number.isInteger(saved.score) && saved.score >= 0 && typeof saved.name === "string") {
+          return saved;
+        }
+      } catch {}
+      return { score: 0, name: "" };
+    }
+
+    function updateBestScoreDisplay() {
+      highScoreDisplay.textContent = String(bestScore.score).padStart(2, "0");
+      highScoreNameDisplay.textContent = bestScore.name ? `by ${bestScore.name}` : "No name yet";
+    }
+
+    function resetBoard() {
+      snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      direction = { x: 1, y: 0 };
+      nextDirection = direction;
+      score = 0;
+      scoreDisplay.textContent = "00";
+      placeApple();
+      draw();
+    }
+
+    function placeApple() {
+      do {
+        apple = {
+          x: Math.floor(Math.random() * cellCount),
+          y: Math.floor(Math.random() * cellCount)
+        };
+      } while (snake.some((segment) => segment.x === apple.x && segment.y === apple.y));
+    }
+
+    function draw() {
+      context.fillStyle = "#c9dfa5";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.strokeStyle = "rgba(23, 40, 32, .09)";
+      context.lineWidth = 1;
+      for (let line = cellSize; line < canvas.width; line += cellSize) {
+        context.beginPath();
+        context.moveTo(line, 0);
+        context.lineTo(line, canvas.height);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(0, line);
+        context.lineTo(canvas.width, line);
+        context.stroke();
+      }
+
+      context.fillStyle = "#d84f35";
+      context.fillRect(apple.x * cellSize + 4, apple.y * cellSize + 4, 12, 12);
+      drawSnake();
+
+      if (gameState !== "running") drawOverlay();
+    }
+
+    function drawSnake() {
+      snake.forEach((segment, index) => {
+        const x = segment.x * cellSize;
+        const y = segment.y * cellSize;
+        const inset = 2;
+        context.fillStyle = index === 0 ? "#172820" : index % 2 === 0 ? "#315d42" : "#244b38";
+        context.fillRect(
+          x + inset,
+          y + inset,
+          cellSize - inset * 2,
+          cellSize - inset * 2
+        );
+        context.strokeStyle = "#172820";
+        context.lineWidth = 1;
+        context.strokeRect(x + inset + 0.5, y + inset + 0.5, cellSize - inset * 2 - 1, cellSize - inset * 2 - 1);
+
+        if (index > 0) {
+          context.fillStyle = "#91b872";
+          context.fillRect(x + 5, y + 5, 3, 3);
+        }
+      });
+
+      const head = snake[0];
+      const x = head.x * cellSize;
+      const y = head.y * cellSize;
+      let eyes;
+      if (direction.x === 1) eyes = [{ x: 13, y: 5 }, { x: 13, y: 12 }];
+      else if (direction.x === -1) eyes = [{ x: 4, y: 5 }, { x: 4, y: 12 }];
+      else if (direction.y === -1) eyes = [{ x: 5, y: 4 }, { x: 12, y: 4 }];
+      else eyes = [{ x: 5, y: 13 }, { x: 12, y: 13 }];
+
+      context.fillStyle = "#f7f8ef";
+      eyes.forEach((eye) => context.fillRect(x + eye.x, y + eye.y, 3, 3));
+      context.fillStyle = "#172820";
+      const pupilX = direction.x;
+      const pupilY = direction.y;
+      eyes.forEach((eye) => context.fillRect(x + eye.x + pupilX, y + eye.y + pupilY, 2, 2));
+    }
+
+    function drawOverlay() {
+      context.fillStyle = "rgba(23, 40, 32, .76)";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#f7f8ef";
+      context.textAlign = "center";
+      context.font = "bold 22px Courier New, monospace";
+      const message = gameState === "ready" ? "READY?" : gameState === "paused" ? "PAUSED" : "GAME OVER";
+      context.fillText(message, canvas.width / 2, canvas.height / 2 - 4);
+      context.font = "14px Courier New, monospace";
+      context.fillText(gameState === "ready" ? "Press Start to play" : "Press Start to try again", canvas.width / 2, canvas.height / 2 + 24);
+    }
+
+    function startGame() {
+      clearTimeout(timerId);
+      recordForm.hidden = true;
+      recordNameInput.value = "";
+      resetBoard();
+      gameState = "running";
+      startButton.textContent = "Pause game";
+      statusDisplay.textContent = "Arrow keys or WASD to move. Space to pause.";
+      draw();
+      timerId = setTimeout(tick, 150);
+    }
+
+    function tick() {
+      if (gameState !== "running") return;
+      direction = nextDirection;
+      const head = {
+        x: (snake[0].x + direction.x + cellCount) % cellCount,
+        y: (snake[0].y + direction.y + cellCount) % cellCount
+      };
+      const eatingApple = head.x === apple.x && head.y === apple.y;
+      const bodyToCheck = eatingApple ? snake : snake.slice(0, -1);
+      const hitSnake = bodyToCheck.some((segment) => segment.x === head.x && segment.y === head.y);
+
+      if (hitSnake) {
+        gameState = "over";
+        startButton.textContent = "Play again";
+        if (score > bestScore.score) {
+          statusDisplay.textContent = `New high score: ${score}! Save your name below.`;
+          recordForm.hidden = false;
+          recordNameInput.focus();
+        } else {
+          statusDisplay.textContent = `Game over. You ate ${score} ${score === 1 ? "apple" : "apples"}.`;
+        }
+        draw();
+        return;
+      }
+
+      snake.unshift(head);
+      if (eatingApple) {
+        score += 1;
+        scoreDisplay.textContent = String(score).padStart(2, "0");
+        placeApple();
+      } else {
+        snake.pop();
+      }
+
+      draw();
+      timerId = setTimeout(tick, Math.max(70, 150 - score * 3));
+    }
+
+    function setDirection(x, y) {
+      if (gameState !== "running") return;
+      if (x !== -direction.x || y !== -direction.y) nextDirection = { x, y };
+    }
+
+    function togglePause() {
+      if (gameState === "running") {
+        clearTimeout(timerId);
+        gameState = "paused";
+        startButton.textContent = "Resume game";
+        statusDisplay.textContent = "Paused. Press Space or Resume to continue.";
+        draw();
+      } else if (gameState === "paused") {
+        gameState = "running";
+        startButton.textContent = "Pause game";
+        statusDisplay.textContent = "Arrow keys or WASD to move. Space to pause.";
+        draw();
+        timerId = setTimeout(tick, 150);
+      }
+    }
+
+    document.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      const directions = {
+        arrowup: [0, -1], w: [0, -1],
+        arrowdown: [0, 1], s: [0, 1],
+        arrowleft: [-1, 0], a: [-1, 0],
+        arrowright: [1, 0], d: [1, 0]
+      };
+
+      if (directions[key]) {
+        event.preventDefault();
+        setDirection(...directions[key]);
+      } else if (key === " ") {
+        event.preventDefault();
+        togglePause();
+      }
+    });
+
+    document.querySelectorAll("[data-dir]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const directions = {
+          up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0]
+        };
+        setDirection(...directions[button.dataset.dir]);
+      });
+    });
+
+    recordForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const name = recordNameInput.value.trim();
+      if (!name) {
+        recordNameInput.focus();
+        return;
+      }
+
+      bestScore = { score, name };
+      let saved = false;
+      try {
+        localStorage.setItem(recordStorageKey, JSON.stringify(bestScore));
+        saved = true;
+      } catch {}
+      updateBestScoreDisplay();
+      recordForm.hidden = true;
+      statusDisplay.textContent = saved
+        ? `High score saved for ${name}: ${score} ${score === 1 ? "apple" : "apples"}.`
+        : "High score saved for this session only; browser storage is unavailable.";
+    });
+
+    startButton.addEventListener("click", () => {
+      if (gameState === "running" || gameState === "paused") togglePause();
+      else startGame();
+    });
+    document.querySelector("#restart-button").addEventListener("click", startGame);
+
+    updateBestScoreDisplay();
+    resetBoard();
+  </script>
+</body>
+</html>
